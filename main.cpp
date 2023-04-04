@@ -22,6 +22,7 @@ vector<string> parseLine(string input, string delimiter) {
     res.push_back (input.substr (pos_start));
     return res;
 }
+
 struct point {
     int x;
     int y;
@@ -122,16 +123,20 @@ class Data {
         vector<vector<float>> pReal;
         vector<vector<float>> pNew;
         vector<vector<float>> pCount;
+        vector<vector<vector<vector<float>>>> deltaP;
         float pAvgReal = 0;
         float pAvg = 0;
         float pDiff = 0;
         float pError = 0;
 
-        Args* args;        
+        Args* args;  
+        ofstream log;
 
     public:
         Data(Args* args) {
             this->args = args;
+            string fileName = "log";
+            log.open(fileName.append("_").append(args->dataFile));
             for(int i = 0; i < this->args->Imax; i++) {
                 x.push_back(vector<float>(this->args->Jmax, 0));
                 y.push_back(vector<float>(this->args->Jmax, 0));
@@ -142,6 +147,9 @@ class Data {
                 pNew.push_back(vector<float>(this->args->Jmax, 0));
                 pCount.push_back(vector<float>(this->args->Jmax, 0));
             }
+            vector<vector<vector<vector<float>>>> dp(args->Imax, 
+                vector<vector<vector<float>>>(args->Jmax, vector<vector<float>>(args->Imax, vector<float>(args->Jmax, 0))));
+            deltaP = dp;
 
             // generate some random numbers for testing, can remove it.
             srand((unsigned) time(NULL));
@@ -149,7 +157,7 @@ class Data {
                 for(int j = 0; j < args->Jmax; j++) {
                     x[i][j] = i*args->dx;
                     y[i][j] = j*args->dy;
-                    pReal[i][j] = exp(sinf((x[i][j] + y[i][j])*1.0/(args->Imax + args->Jmax)*2*PI));
+                    pReal[i][j] = -0.25*(cosf(4*PI*x[i][j]) + cosf(4*PI*y[i][j]));
                     pAvgReal += pReal[i][j];
                 }
             }
@@ -168,15 +176,20 @@ class Data {
             }
         }
 
+        ~Data() {
+            log.close();
+        }
+
         void readFromFile() {
             int lineNumber = 0;
             int index = 0;
             std::ifstream input( args->dataFile );
             if (!input) {
                 cout<<"Could not open file: "<<args->dataFile<<endl;
+                return;
             }
+            pAvgReal = 0;
             for( std::string line; getline( input, line ); ) {
-                cout<<line<<endl;
                 lineNumber++;
                 if (lineNumber > args->numOfHeaderLines) {
                     int i = index/this->args->Jmax;
@@ -186,6 +199,7 @@ class Data {
                     index++;
                 }
             }
+            pAvgReal = pAvgReal/args->Imax/args->Jmax;
             input.close();
         }
 
@@ -197,6 +211,7 @@ class Data {
             dvdt[i][j] = std::stof(pointWiseData[3]);
             if (args->hasRealP) {
                 pReal[i][j] = std::stof(pointWiseData[4]);
+                pAvgReal += pReal[i][j];
             }
         }
 
@@ -211,7 +226,7 @@ class Data {
             } else {
                 outdata<<"VARIABLES = "<< "\"X\",\"Y\",\"Dudt\",\"DvDt\",\"Pcal\",\"Count\""<<endl;
             }
-            outdata<<"ZONE I="<<args->Imax<<" "<<"J="<<args->Jmax<<endl;
+            outdata<<"ZONE I="<<args->Imax<<", "<<"J="<<args->Jmax<<endl;
 
             for(int i = 0; i < args->Imax; i++) {
                 for(int j = 0; j < args->Jmax; j++) {
@@ -227,12 +242,44 @@ class Data {
 
         void parallelLinesOdiMultiple() {
             cout<<"Processing starts"<<endl;
-            for(int i = 0; i < args->numOfIterations ; i++) {
-                parallellinesOdiOnce(i == args->numOfIterations - 1);
+            log<<"Processing starts"<<endl;
+            parallellinesOdiOnce(false);
+            evalError(false);
+            for(int iteration = 0; iteration < args->numOfIterations; iteration++) {
+                /*for(int i = 0; i < args->Imax; i++) {
+                    for(int j = 0; j < args->Jmax; j++) {
+                        //from four boundaries
+                        for(int iin = 0; iin < args->Imax; iin++) {
+                            if (deltaP[iin][0][i][j] != 0) {
+                                pNew[i][j] += p[iin][0] + deltaP[iin][0][i][j];
+                                pCount[i][j]++;
+                            }
+                            if (deltaP[iin][args->Jmax - 1][i][j] != 0) {
+                                pNew[i][j] += p[iin][args->Jmax - 1] + deltaP[iin][args->Jmax - 1][i][j];
+                                pCount[i][j]++;                          
+                            }
+                        }
+
+                        for(int jin = 0; jin < args->Jmax; jin++) {
+                            if (deltaP[0][jin][i][j] != 0) {
+                                pNew[i][j] += p[0][jin] + deltaP[0][jin][i][j];
+                                pCount[i][j]++;
+                            }
+                            if (deltaP[args->Imax - 1][jin][i][j] != 0) {
+                                pNew[i][j] += p[args->Imax - 1][jin] + deltaP[args->Imax - 1][jin][i][j];
+                                pCount[i][j]++;
+                            }
+                        }
+                    }
+                }*/
+                parallellinesOdiOnce(iteration == args->numOfIterations - 1);
+                evalError(iteration == args->numOfIterations - 1);
                 if (args->hasRealP) {
-                    cout<<"Iteration: "<<i<<" abs(p - pReal): "<<pError << " abs(pN - p):"<<pDiff<<endl;
+                    cout<<"Iteration: "<<iteration<<" abs(p - pReal): "<<pError << " abs(pN - p):"<<pDiff<<endl;
+                    log<<"Iteration: "<<iteration<<" abs(p - pReal): "<<pError << " abs(pN - p):"<<pDiff<<endl;
                 } else {
-                    cout<<"Iteration: "<<i<< " abs(pN - p):"<<pDiff<<endl;
+                    cout<<"Iteration: "<<iteration<< " abs(pN - p):"<<pDiff<<endl;
+                    log<<"Iteration: "<<iteration<< " abs(pN - p):"<<pDiff<<endl;
                 }
             }
         }
@@ -252,7 +299,9 @@ class Data {
                     }
                 }
             }
-            // averaging
+        }
+
+        void evalError(bool isLastIeration) {
             pAvg = 0;
             pDiff = 0;
             pError = 0;
@@ -396,15 +445,16 @@ class Data {
                     pint += -args->rho*(inext1 - ilast)*args->dx*0.5*(dudt[inext1][jnext1] + dudt[ilast][jlast]);
                     pNew[inext1][jnext1] += (p[iin][jin] + pint);
                     pCount[inext1][jnext1] += 1;
+                    deltaP[iin][jin][inext1][jnext1] = pint;
                     ilast = inext1;
                 } else if (choose == 2) {
                     pint += -args->rho*(jnext2 - jlast)*args->dy*0.5*(dvdt[inext2][jnext2] + dvdt[ilast][jlast]);
                     pNew[inext2][jnext2] += (p[iin][jin] + pint);
                     pCount[inext2][jnext2] += 1;
+                    deltaP[iin][jin][inext2][jnext2] = pint;
                     jlast = jnext2;                 
                 }
             } while(abs(ilast - iout) + abs(jlast - jout) > 1e-1 && choose != -1);
-            //if (choose == -1)cout<<"Error, wrong point"<<endl;
             return choose != -1 ? pint : 0;
         }        
 };
