@@ -19,11 +19,11 @@ py = 0.5*n*pi*np.sin(2*n*pi*yv)
 
 # case 1
 k1 = 0.1
-m = 1
+m = 0.5
 epx1 = 0.5*k1*n*pi*np.cos(2*m*pi*xv)
 epy1 = 0.5*k1*n*pi*np.cos(2*m*pi*yv)
 
-with open('case_1_m1.txt', 'w') as f:
+with open('case_1_m0.5.txt', 'w') as f:
     f.write("TITLE = \"Case 1: irrotational error\"\n")
     f.write("VARIABLES=\"X\" \"Y\" \"DuDt\" \"DvDt\" \"PReal\"\n")
     f.write(f"ZONE I={nx}, J={ny}\n")
