@@ -38,3 +38,4 @@ Iteration: 35 abs(p - pReal): 0.0362067 abs(pN - p):5.14925e-07
 Iteration: 36 abs(p - pReal): 0.0362068 abs(pN - p):5.23883e-07
 Iteration: 37 abs(p - pReal): 0.0362069 abs(pN - p):5.60198e-07
 Iteration: 38 abs(p - pReal): 0.0362069 abs(pN - p):5.53536e-07
+Iteration: 39 abs(p - pReal): 0.0362069 abs(pN - p):5.70336e-07
