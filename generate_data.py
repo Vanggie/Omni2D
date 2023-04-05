@@ -22,6 +22,8 @@ k1 = 0.1
 m = 0.5
 epx1 = 0.5*k1*n*pi*np.cos(2*m*pi*xv)
 epy1 = 0.5*k1*n*pi*np.cos(2*m*pi*yv)
+print(np.mean(np.mean(np.abs(epx1), 1),0))
+print(np.mean(np.mean(np.abs(px), 1),0))
 
 with open('case_1_m0.5.txt', 'w') as f:
     f.write("TITLE = \"Case 1: irrotational error\"\n")
@@ -30,6 +32,15 @@ with open('case_1_m0.5.txt', 'w') as f:
     for i in range(nx):
         for j in range(ny):
             f.write(f"{xv[j, i]} {yv[j, i]} {-px[j, i] - epx1[j, i]} {-py[j, i] - epy1[j, i]} {p[j, i]}\n")
+f.close()
+
+with open('groundTruth.txt', 'w') as f:
+    f.write("TITLE = \"Ground Truth: no error\"\n")
+    f.write("VARIABLES=\"X\" \"Y\" \"DuDt\" \"DvDt\" \"PReal\"\n")
+    f.write(f"ZONE I={nx}, J={ny}\n")
+    for i in range(nx):
+        for j in range(ny):
+            f.write(f"{xv[j, i]} {yv[j, i]} {-px[j, i]} {-py[j, i]} {p[j, i]}\n")
 f.close()
 
 # case 2
