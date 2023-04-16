@@ -20,8 +20,8 @@ py = 0.5*n*pi*np.sin(2*n*pi*yv)
 # case 1
 k1 = 0.1
 m = 0.5
-epx1 = 0.5*k1*n*pi*np.cos(2*m*pi*xv)
-epy1 = 0.5*k1*n*pi*np.cos(2*m*pi*yv)
+epx1 = k1*np.cos(2*m*pi*xv)
+epy1 = k1*np.cos(2*m*pi*yv)
 print(np.mean(np.mean(np.abs(epx1), 1),0))
 print(np.mean(np.mean(np.abs(px), 1),0))
 
@@ -44,10 +44,10 @@ with open('groundTruth.txt', 'w') as f:
 f.close()
 
 # case 2
-k2 = 0.1;
-m = 4;
-epx2 = k2*0.5*n*pi*np.multiply(np.cos(m*pi*xv), np.sin(m*pi*yv))
-epy2 = k2*0.5*n*pi*np.multiply(np.sin(m*pi*xv), np.cos(m*pi*yv))
+k2 = k1*math.sqrt(2);
+k = 2*m;
+epx2 = k2*np.multiply(np.cos(k*pi*xv), np.sin(k*pi*yv))
+epy2 = -k2*np.multiply(np.sin(k*pi*xv), np.cos(k*pi*yv))
 
 with open('case_2.txt', 'w') as f:
     f.write("TITLE = \"Case 2: an solenoidal error in grad P\"\n")
@@ -59,9 +59,9 @@ with open('case_2.txt', 'w') as f:
 f.close()
 
 # case 3
-k3 = 0.1;
-epx3 = k3*0.5*n*pi*np.ones((nx, ny))
-epy3 = k3*0.5*n*pi*np.ones((nx, ny))
+k3 = k1*math.sqrt(2)/2;
+epx3 = k3*np.ones((nx, ny))
+epy3 = k3*np.ones((nx, ny))
 
 with open('case_3.txt', 'w') as f:
     f.write("TITLE = \"Case 3: an harmonic error in grad P\"\n")
